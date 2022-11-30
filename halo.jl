@@ -140,11 +140,11 @@ function halo(burgers::Burgers)
         MPI.Wait(req)
     end
 
-  #u
-  if get_x(rank,side) != 0
-    for i in 1:ny
-        nextu[1,i]  = bufrul[i]
-    end
+    #u
+    if get_x(rank,side) != 0
+        for i in 1:ny
+            nextu[1,i]  = bufrul[i]
+        end
     end
     if get_x(rank,side) != side-1
         for i in 1:ny
