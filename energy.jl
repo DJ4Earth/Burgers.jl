@@ -1,7 +1,7 @@
 function energy(burgers::Burgers)
     lenergy = sum(
-    burgers.nextu[2:end-1,2:end-1].^2 .+
-    burgers.nextv[2:end-1,2:end-1].^2
+        burgers.nextu[2:end-1,2:end-1].^2 .+
+        burgers.nextv[2:end-1,2:end-1].^2
     )
     genergy = MPI.Allreduce(
     lenergy,

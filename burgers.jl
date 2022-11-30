@@ -1,4 +1,5 @@
 include("header.jl")
+include("utils.jl")
 include("advance.jl")
 include("halo.jl")
 include("energy.jl")
@@ -39,9 +40,19 @@ function set_initial_conditions!(burgers::Burgers)
     nextv = burgers.nextv
     nx = burgers.nx
     ny = burgers.ny
-    if get_x(rank, side) == 0 && get_y(rank, side) == 0
-        lastu[10:20 , 10:20] .= 1.0
-        lastv[10:20 , 10:20] .= 1.0
+    # if get_x(rank, side) == 0 && get_y(rank, side) == 0
+    #     lastu[10:20 , 10:20] .= 1.0
+    #     lastv[10:20 , 10:20] .= 1.0
+    # end
+    for i in 2:size(lastu, 1)-1
+        for j in 2:size(lastu, 2)-1
+            lastu[i,j] = sin(get_gx(burgers, i))
+            lastv[i,j] = sin(get_gx(burgers, j))
+        end
+        for j in 2:size(lastu, 2)-1
+            nextu[i,j] = sin(get_gx(burgers, i))
+            nextv[i,j] = sin(get_gx(burgers, j))
+        end
     end
     return nothing
 end
@@ -49,7 +60,7 @@ end
 MPI.Init()
 Nx = 100
 Ny = 100
-tsteps = 1000
+tsteps = 100
 μ = 0.1 # 1/Re
 ν = 0.1
 # Create object from struct.
@@ -59,14 +70,14 @@ burgers = Burgers(Nx, Ny, μ, ν, tsteps)
 set_boundary_conditions!(burgers)
 set_initial_conditions!(burgers)
 
-vel = sqrt.(
-burgers.lastu.^2 .+
-burgers.lastv.^2
-)
-heatmap(vel)
+# heatmap(vel)
+ienergy = energy(burgers)
 
 np = MPI.Comm_size(burgers.comm)
 rank = MPI.Comm_rank(burgers.comm)
+if burgers.rank == 0
+    println("[$rank] Initial energy E = $ienergy")
+end
 fenergy = final_energy(burgers)
 if burgers.rank == 0
     println("[$rank] Final energy E = $fenergy")
@@ -81,7 +92,7 @@ heatmap(vel)
 burgers = Burgers(Nx, Ny, μ, ν, tsteps)
 set_boundary_conditions!(burgers)
 set_initial_conditions!(burgers)
-snaps = 4
+snaps = 100
 revolve = Revolve{Burgers}(tsteps, snaps; verbose=0)
 # dburgers = Burgers(Nx, Ny, μ, ν, tsteps)
 
@@ -91,10 +102,6 @@ dburgers = Zygote.gradient(final_energy, burgers, revolve)
 vel = sqrt.(
 dburgers[1].lastu[2:end-1,2:end-1].^2 +
 dburgers[1].lastv[2:end-1,2:end-1].^2
-)
-vel = sqrt.(
-dburgers[1].lastu[10:20,10:20].^2 +
-dburgers[1].lastv[10:20,10:20].^2
 )
 if burgers.rank == 0
     println("Norm of energy with respect to initial velocity norm(dE/dv0) = $(norm(vel))")
