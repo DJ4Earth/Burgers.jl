@@ -27,11 +27,12 @@ end
 # get global coordinates
 
 function get_gx(burgers::Burgers, x::Int64)
-    dx = π / burgers.Nx
-    return (burgers.side * burgers.nx + x) * dx
+    dx = π / (burgers.Nx-1)
+    return (get_x(burgers.rank, burgers.side) * (burgers.nx-2) + x-1) * dx
 end
 
 function get_gy(burgers::Burgers, y::Int64)
-    dy = π / burgers.Ny
-    return (burgers.side * burgers.ny + y) * dy
+    dy = π / (burgers.Ny-1)
+    # @show  get_y(burgers.rank, burgers.side) * (burgers.ny-2) + y-1
+    return (get_y(burgers.rank, burgers.side) * (burgers.ny-2) + y-1) * dy
 end

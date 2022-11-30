@@ -40,37 +40,36 @@ function set_initial_conditions!(burgers::Burgers)
     nextv = burgers.nextv
     nx = burgers.nx
     ny = burgers.ny
-    # if get_x(rank, side) == 0 && get_y(rank, side) == 0
-    #     lastu[10:20 , 10:20] .= 1.0
-    #     lastv[10:20 , 10:20] .= 1.0
-    # end
-    for i in 2:size(lastu, 1)-1
-        for j in 2:size(lastu, 2)-1
+    for i in 1:size(lastu, 1)
+        for j in 1:size(lastu, 2)
             lastu[i,j] = sin(get_gx(burgers, i))
-            lastv[i,j] = sin(get_gx(burgers, j))
+            lastv[i,j] = sin(get_gy(burgers, j))
         end
-        for j in 2:size(lastu, 2)-1
+        for j in 1:size(lastu, 2)
             nextu[i,j] = sin(get_gx(burgers, i))
-            nextv[i,j] = sin(get_gx(burgers, j))
+            nextv[i,j] = sin(get_gy(burgers, j))
         end
     end
     return nothing
 end
 
 MPI.Init()
-Nx = 100
-Ny = 100
-tsteps = 100
+scaling = 4
+Nx = 100 * scaling
+Ny = 100 * scaling
+tsteps = 1000 * scaling
 μ = 0.1 # 1/Re
 ν = 0.1
+@show μ
+@show ν
 # Create object from struct.
 burgers = Burgers(Nx, Ny, μ, ν, tsteps)
 
 # Boundary conditions
-set_boundary_conditions!(burgers)
 set_initial_conditions!(burgers)
+set_boundary_conditions!(burgers)
 
-# heatmap(vel)
+heatmap(vel)
 ienergy = energy(burgers)
 
 np = MPI.Comm_size(burgers.comm)
