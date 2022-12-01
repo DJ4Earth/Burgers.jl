@@ -54,20 +54,31 @@ function set_initial_conditions!(burgers::Burgers)
 end
 
 MPI.Init()
-scaling = 4
-Nx = 100 * scaling
-Ny = 100 * scaling
-tsteps = 1000 * scaling
+scaling = 0.1
+
+Nx = 100
+Ny = 100
+tsteps = 1000
+Tmax = 10
+
 μ = 0.1 # 1/Re
-ν = 0.1
-@show μ
-@show ν
+#ν = 0.1
+
+dx = scaling / Nx
+dy = scaling / Ny
+dt = Tmax / tsteps
+
 # Create object from struct.
-burgers = Burgers(Nx, Ny, μ, ν, tsteps)
+burgers = Burgers(Nx, Ny, μ, dx, dy, dt, tsteps)
 
 # Boundary conditions
 set_initial_conditions!(burgers)
 set_boundary_conditions!(burgers)
+
+vel = sqrt.(
+burgers.nextu[2:end-1,2:end-1].^2 +
+burgers.nextv[2:end-1,2:end-1].^2
+)
 
 heatmap(vel)
 ienergy = energy(burgers)
@@ -88,26 +99,26 @@ burgers.nextv[2:end-1,2:end-1].^2
 )
 heatmap(vel)
 
-burgers = Burgers(Nx, Ny, μ, ν, tsteps)
-set_boundary_conditions!(burgers)
-set_initial_conditions!(burgers)
-snaps = 100
-revolve = Revolve{Burgers}(tsteps, snaps; verbose=0)
-# dburgers = Burgers(Nx, Ny, μ, ν, tsteps)
+# burgers = Burgers(Nx, Ny, μ, dx, dy, dt, tsteps)
+# set_boundary_conditions!(burgers)
+# set_initial_conditions!(burgers)
+# snaps = 100
+# revolve = Revolve{Burgers}(tsteps, snaps; verbose=0)
+# # dburgers = Burgers(Nx, Ny, μ, ν, tsteps)
 
-dburgers = Zygote.gradient(final_energy, burgers, revolve)
-# autodiff(final_energy, Active, Duplicated(burgers, dburgers))
+# dburgers = Zygote.gradient(final_energy, burgers, revolve)
+# # autodiff(final_energy, Active, Duplicated(burgers, dburgers))
 
-vel = sqrt.(
-dburgers[1].lastu[2:end-1,2:end-1].^2 +
-dburgers[1].lastv[2:end-1,2:end-1].^2
-)
-if burgers.rank == 0
-    println("Norm of energy with respect to initial velocity norm(dE/dv0) = $(norm(vel))")
-end
-heatmap(vel)
-heatmap(dburgers[1].lastu[2:end-1,2:end-1])
+# vel = sqrt.(
+# dburgers[1].lastu[2:end-1,2:end-1].^2 +
+# dburgers[1].lastv[2:end-1,2:end-1].^2
+# )
+# if burgers.rank == 0
+#     println("Norm of energy with respect to initial velocity norm(dE/dv0) = $(norm(vel))")
+# end
+# heatmap(vel)
+# heatmap(dburgers[1].lastu[2:end-1,2:end-1])
 
-if !isinteractive()
-    MPI.Finalize()
-end
+# if !isinteractive()
+#     MPI.Finalize()
+# end

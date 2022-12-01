@@ -15,7 +15,9 @@ mutable struct Burgers
     Nx::Int
     Ny::Int
     μ::Float64
-    ν::Float64
+    dx::Float64
+    dy::Float64
+    dt::Float64
     tsteps::Int
     np::Int
     side::Int
@@ -47,7 +49,9 @@ function Burgers(
     Nx::Int,
     Ny::Int,
     μ::Float64,
-    ν::Float64,
+    dx::Float64,
+    dy::Float64,
+    dt::Float64,
     tsteps::Int;
     comm::MPI.Comm = MPI.COMM_WORLD
 )
@@ -78,7 +82,9 @@ function Burgers(
     return Burgers(
         nextu, nextv, lastu, lastv,
         nxlocal, nylocal, Nx, Ny,
-        μ, ν, tsteps, np, side,
+        μ,
+        dx, dy, dt,
+        tsteps, np, side,
         rank, comm,
         bufrul, bufrur, bufrud, bufruu,
         bufrvl, bufrvr, bufrvd, bufrvu,
