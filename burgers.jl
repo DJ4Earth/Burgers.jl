@@ -54,19 +54,19 @@ function set_initial_conditions!(burgers::Burgers)
 end
 
 MPI.Init()
-scaling = 0.1
+scaling = 1
 
-Nx = 100
-Ny = 100
-tsteps = 1000
-Tmax = 10
+Nx = 100*scaling
+Ny = 100*scaling
+tsteps = 1000*scaling
+# Tmax = 0.001
 
-μ = 0.1 # 1/Re
+μ = 0.01 # 1/Re
 #ν = 0.1
 
-dx = scaling / Nx
-dy = scaling / Ny
-dt = Tmax / tsteps
+dx = 1e-2
+dy = 1e-2
+dt = 1e-3
 
 # Create object from struct.
 burgers = Burgers(Nx, Ny, μ, dx, dy, dt, tsteps)
