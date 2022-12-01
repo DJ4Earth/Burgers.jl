@@ -4,29 +4,34 @@ function advance(burgers::Burgers)
     lastu = burgers.lastu
     lastv = burgers.lastv
     μ = burgers.μ
-    ν = burgers.ν
+    # ν = burgers.ν
     nx = burgers.nx
     ny = burgers.ny
+    dt = burgers.dt 
+    dx = burgers.dx
+    dy = burgers.dy
     rank = burgers.rank
     side = burgers.side
     for i in 2:(nx-1)
         for j in 2:(ny-1)
-            nextu[i,j] = lastu[i,j] - μ * (
-            lastu[i,j]*(lastu[i,j]-lastu[i-1,j]) -
-            lastv[i,j]*(lastu[i,j]-lastu[i,j-1])
+
+            nextu[i,j] = lastu[i,j] + dt * ( (
+            - lastu[i,j]/(2*dx)*(lastu[i+1,j]-lastu[i-1,j]) 
+            - lastv[i,j]/(2*dy)*(lastu[i,j+1]-lastu[i,j-1])
             ) +
-            ν * (
-            lastu[i+1,j]-2*lastu[i,j]+ lastu[i-1,j] +
-            (lastu[i,j+1]-2*lastu[i,j]+ lastu[i,j-1])
-            )
-            nextv[i,j] = lastv[i,j]- μ * (
-            lastu[i,j]*(lastv[i,j]-lastv[i-1,j]) -
-            lastv[i,j]*(lastv[i,j]-lastv[i,j-1])
+            μ * (
+            (lastu[i+1,j]-2*lastu[i,j]+ lastu[i-1,j])/dx^2 +
+            (lastu[i,j+1]-2*lastu[i,j]+ lastu[i,j-1])/dy^2
+            ) )
+
+            nextv[i,j] = lastv[i,j] + dt * ( (
+            - lastu[i,j]/(2*dx)*(lastv[i+1,j]-lastv[i-1,j]) 
+            - lastv[i,j]/(2*dy)*(lastv[i,j+1]-lastv[i,j-1])
             ) +
-            ν * (
-            (lastv[i+1,j]-2*lastv[i,j]+ lastv[i-1,j]) +
-            (lastv[i,j+1]-2*lastv[i,j]+ lastv[i,j-1])
-            )
+            μ * (
+            (lastv[i+1,j]-2*lastv[i,j]+ lastv[i-1,j])/dx^2 +
+            (lastv[i,j+1]-2*lastv[i,j]+ lastv[i,j-1])/dy^2
+            ) )
         end
     end
     if get_x(rank, side) == 0
