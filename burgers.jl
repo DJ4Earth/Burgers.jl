@@ -99,26 +99,26 @@ burgers.nextv[2:end-1,2:end-1].^2
 )
 heatmap(vel)
 
-# burgers = Burgers(Nx, Ny, μ, dx, dy, dt, tsteps)
-# set_boundary_conditions!(burgers)
-# set_initial_conditions!(burgers)
-# snaps = 100
-# revolve = Revolve{Burgers}(tsteps, snaps; verbose=0)
-# # dburgers = Burgers(Nx, Ny, μ, ν, tsteps)
+burgers = Burgers(Nx, Ny, μ, dx, dy, dt, tsteps)
+set_boundary_conditions!(burgers)
+set_initial_conditions!(burgers)
+snaps = 100
+revolve = Revolve{Burgers}(tsteps, snaps; verbose=0)
+# dburgers = Burgers(Nx, Ny, μ, ν, tsteps)
 
-# dburgers = Zygote.gradient(final_energy, burgers, revolve)
-# # autodiff(final_energy, Active, Duplicated(burgers, dburgers))
+dburgers = Zygote.gradient(final_energy, burgers, revolve)
+# autodiff(final_energy, Active, Duplicated(burgers, dburgers))
 
-# vel = sqrt.(
-# dburgers[1].lastu[2:end-1,2:end-1].^2 +
-# dburgers[1].lastv[2:end-1,2:end-1].^2
-# )
-# if burgers.rank == 0
-#     println("Norm of energy with respect to initial velocity norm(dE/dv0) = $(norm(vel))")
-# end
-# heatmap(vel)
+vel = sqrt.(
+dburgers[1].lastu[2:end-1,2:end-1].^2 +
+dburgers[1].lastv[2:end-1,2:end-1].^2
+)
+if burgers.rank == 0
+    println("Norm of energy with respect to initial velocity norm(dE/dv0) = $(norm(vel))")
+end
+heatmap(vel)
 # heatmap(dburgers[1].lastu[2:end-1,2:end-1])
 
-# if !isinteractive()
-#     MPI.Finalize()
-# end
+if !isinteractive()
+    MPI.Finalize()
+end
