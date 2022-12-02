@@ -59,14 +59,12 @@ scaling = 1
 Nx = 100*scaling
 Ny = 100*scaling
 tsteps = 1000*scaling
-# Tmax = 0.001
 
-μ = 0.01 # 1/Re
-#ν = 0.1
+μ = 0.01 # # U * L / Re,   nu
 
-dx = 1e-2
-dy = 1e-2
-dt = 1e-3
+dx = 1e-1
+dy = 1e-1
+dt = 3e-3 # dt < dx^2 * 0.5
 
 # Create object from struct.
 burgers = Burgers(Nx, Ny, μ, dx, dy, dt, tsteps)
