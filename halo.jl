@@ -142,43 +142,43 @@ function halo(burgers::Burgers)
 
     #u
     if get_x(rank,side) != 0
-        for i in 1:ny
+        @inbounds for i in 1:ny
             nextu[1,i]  = bufrul[i]
         end
     end
     if get_x(rank,side) != side-1
-        for i in 1:ny
+        @inbounds for i in 1:ny
             nextu[nx,i] = bufrur[i]
         end
     end
     if get_y(rank,side) != 0
-        for i in 1:nx
+        @inbounds for i in 1:nx
             nextu[i,1]  = bufrud[i]
         end
     end
     if get_y(rank,side) != side-1
-        for i in 1:nx
+        @inbounds for i in 1:nx
             nextu[i,ny] = bufruu[i]
         end
     end
     # v
     if get_x(rank,side) != 0
-        for i in 1:ny
+        @inbounds for i in 1:ny
             nextv[1,i]  = bufrvl[i]
         end
     end
     if get_x(rank,side) != side-1
-        for i in 1:ny
+        @inbounds for i in 1:ny
             nextv[nx,i] = bufrvr[i]
         end
     end
     if get_y(rank,side) != 0
-        for i in 1:nx
+        @inbounds for i in 1:nx
             nextv[i,1]  = bufrvd[i]
         end
     end
     if get_y(rank,side) != side-1
-        for i in 1:nx
+        @inbounds for i in 1:nx
             nextv[i,ny] = bufrvu[i]
         end
     end
