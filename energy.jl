@@ -1,5 +1,5 @@
 function energy(burgers::Burgers)
-    lenergy = sum(
+    @inbounds lenergy = sum(
         burgers.nextu[2:end-1,2:end-1].^2 .+
         burgers.nextv[2:end-1,2:end-1].^2
     )
@@ -33,7 +33,7 @@ function final_energy(
         copyto!(burgers.lastu, burgers.nextu)
         copyto!(burgers.lastv, burgers.nextv)
     end
-    lenergy = sum(
+    @inbounds lenergy = sum(
     burgers.nextu[2:end-1,2:end-1].^2 .+
     burgers.nextv[2:end-1,2:end-1].^2
     )
