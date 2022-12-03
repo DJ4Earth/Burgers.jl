@@ -67,6 +67,7 @@ function main(Nx::Int64, Ny::Int64, tsteps::Int64, μ::Float64, dx::Float64, dy:
     burgers.nextu[2:end-1,2:end-1].^2 +
     burgers.nextv[2:end-1,2:end-1].^2
     )
+    save("IC.jld", vel, burgers.nextu, burgers.nextv)
 
     # heatmap(vel)
     ienergy = energy(burgers)
@@ -89,15 +90,16 @@ function main(Nx::Int64, Ny::Int64, tsteps::Int64, μ::Float64, dx::Float64, dy:
         println("[$rank] Final energy E = $fenergy")
     end
     # PProf.Allocs.pprof()
-    if profile
-    PProf.pprof()
-    end
+    # if profile
+    # PProf.pprof()
+    # end
 
     vel = sqrt.(
     burgers.nextu[2:end-1,2:end-1].^2 +
     burgers.nextv[2:end-1,2:end-1].^2
     )
-    heatmap(vel)
+    save("final.jld", vel, burgers.nextu, burgers.nextv)
+    # heatmap(vel)
 
     burgers = Burgers(Nx, Ny, μ, dx, dy, dt, tsteps)
     set_boundary_conditions!(burgers)
@@ -115,13 +117,14 @@ function main(Nx::Int64, Ny::Int64, tsteps::Int64, μ::Float64, dx::Float64, dy:
     # autodiff(final_energy, Active, Duplicated(burgers, dburgers))
 
     vel = sqrt.(
-    dburgers[1].lastu[2:end-1,2:end-1].^2 +
-    dburgers[1].lastv[2:end-1,2:end-1].^2
+    dburgers[1].lastu.^2 +
+    dburgers[1].lastv.^2
     )
     if burgers.rank == 0
         println("Norm of energy with respect to initial velocity norm(dE/dv0) = $(norm(vel))")
     end
-    heatmap(vel)
+    save("final.jld", vel, dburgers[1].lastu, dburgers[1].lastu)
+    # heatmap(vel)
     # heatmap(dburgers[1].lastu[2:end-1,2:end-1])
 
 end
