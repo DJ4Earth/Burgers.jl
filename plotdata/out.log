@@ -1,0 +1,21 @@
+warning: didn't implement memmove, using memcpy as fallback which can result in errors
+warning: didn't implement memmove, using memcpy as fallback which can result in errors
+warning: didn't implement memmove, using memcpy as fallback which can result in errors
+ warning could not automatically determine mpi status type, assuming [24 x i8]
+ warning could not automatically determine mpi status type, assuming [24 x i8]
+ warning could not automatically determine mpi status type, assuming [24 x i8]
+[ Info: prediction:
+[ Info:  overhead forward steps : 18998.0
+[ Info:  overhead factor        : 1.8998
+[ Info: summary:
+[ Info:  overhead forward steps: 18998
+[ Info:  CP stores             : 8999
+[ Info:  NextAction calls      : 38998
+Running Burgers with Nx = 1000, Ny = 1000, tsteps = 10000, μ = 0.01, dx = 0.1, dy = 0.1, dt = 0.001, snaps = 1000
+[0] Initial energy E = 0.9970020000000002
+284.959344 seconds (124.13 k allocations: 645.190 MiB, 0.17% gc time, 0.02% compilation time)
+[0] Final energy E = 0.9967730871544301
+2126.080525 seconds (49.56 M allocations: 574.154 GiB, 0.43% gc time, 1.38% compilation time)
+Norm of energy with respect to initial velocity norm(dE/dv0) = 0.002058353771219331
+2290.05user 181.86system 40:56.70elapsed 100%CPU (0avgtext+0avgdata 97812124maxresident)k
+0inputs+140592outputs (0major+92665867minor)pagefaults 0swaps
