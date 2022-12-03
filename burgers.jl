@@ -56,7 +56,7 @@ function set_initial_conditions!(burgers::Burgers)
 end
 
 # Create object from struct.
-function main(Nx::Int64, Ny::Int64, tsteps::Int64, μ::Float64, dx::Float64, dy::Float64, dt::Float64; profile::Bool=false)
+function main(Nx::Int64, Ny::Int64, tsteps::Int64, μ::Float64, dx::Float64, dy::Float64, dt::Float64, snaps::Int64; profile::Bool=false, writedata::Bool=false)
     burgers = Burgers(Nx, Ny, μ, dx, dy, dt, tsteps)
 
     # Boundary conditions
@@ -67,7 +67,9 @@ function main(Nx::Int64, Ny::Int64, tsteps::Int64, μ::Float64, dx::Float64, dy:
     burgers.nextu[2:end-1,2:end-1].^2 +
     burgers.nextv[2:end-1,2:end-1].^2
     )
-    save("IC.jld", vel, burgers.nextu, burgers.nextv)
+    if writedata
+        save("IC.jld", "vel", vel, "u", burgers.nextu, "v", burgers.nextv)
+    end
 
     # heatmap(vel)
     ienergy = energy(burgers)
@@ -98,13 +100,14 @@ function main(Nx::Int64, Ny::Int64, tsteps::Int64, μ::Float64, dx::Float64, dy:
     burgers.nextu[2:end-1,2:end-1].^2 +
     burgers.nextv[2:end-1,2:end-1].^2
     )
-    save("final.jld", vel, burgers.nextu, burgers.nextv)
+    if writedata
+        save("final.jld", "vel", vel, "u", burgers.nextu, "v", burgers.nextv)
+    end
     # heatmap(vel)
 
     burgers = Burgers(Nx, Ny, μ, dx, dy, dt, tsteps)
     set_boundary_conditions!(burgers)
     set_initial_conditions!(burgers)
-    snaps = 100
     revolve = Revolve{Burgers}(tsteps, snaps; verbose=1)
     # dburgers = Burgers(Nx, Ny, μ, ν, tsteps)
 
@@ -123,27 +126,10 @@ function main(Nx::Int64, Ny::Int64, tsteps::Int64, μ::Float64, dx::Float64, dy:
     if burgers.rank == 0
         println("Norm of energy with respect to initial velocity norm(dE/dv0) = $(norm(vel))")
     end
-    save("final.jld", vel, dburgers[1].lastu, dburgers[1].lastu)
+    if writedata
+        save("adjoints.jld", "dvel", vel, "du", dburgers[1].lastu, "dv", dburgers[1].lastv)
+    end
     # heatmap(vel)
     # heatmap(dburgers[1].lastu[2:end-1,2:end-1])
 
-end
-MPI.Init()
-scaling = 1
-
-Nx = 100*scaling
-Ny = 100*scaling
-tsteps = 1000*scaling
-
-μ = 0.01 # # U * L / Re,   nu
-
-dx = 1e-1
-dy = 1e-1
-dt = 1e-3 # dt < 0.5 * dx^2
-main(Nx, Ny, tsteps, μ, dx, dy, dt)
-# main(Nx, Ny, tsteps, μ, dx, dy, dt)
-# main(Nx, Ny, tsteps, μ, dx, dy, dt;profile=true)
-
-if !isinteractive()
-    MPI.Finalize()
 end
