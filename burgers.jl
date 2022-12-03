@@ -6,6 +6,7 @@ include("energy.jl")
 include("dreduction.jl")
 using Profile
 using PProf
+using JLD
 function set_boundary_conditions!(burgers::Burgers)
     rank = burgers.rank
     side = burgers.side
@@ -77,9 +78,12 @@ function main(Nx::Int64, Ny::Int64, tsteps::Int64, μ::Float64, dx::Float64, dy:
     end
     # Profile.Allocs.clear()
     # Profile.Allocs.@profile begin
-    Profile.clear()
-    Profile.@profile begin
-    global fenergy = final_energy(burgers)
+    # Profile.clear()
+    # Profile.@profile begin
+    @time begin
+        set_boundary_conditions!(burgers)
+        set_initial_conditions!(burgers)
+        global fenergy = final_energy(burgers)
     end
     if burgers.rank == 0
         println("[$rank] Final energy E = $fenergy")
@@ -99,10 +103,15 @@ function main(Nx::Int64, Ny::Int64, tsteps::Int64, μ::Float64, dx::Float64, dy:
     set_boundary_conditions!(burgers)
     set_initial_conditions!(burgers)
     snaps = 100
-    revolve = Revolve{Burgers}(tsteps, snaps; verbose=0)
+    revolve = Revolve{Burgers}(tsteps, snaps; verbose=1)
     # dburgers = Burgers(Nx, Ny, μ, ν, tsteps)
 
-    dburgers = Zygote.gradient(final_energy, burgers, revolve)
+    @time begin
+        set_boundary_conditions!(burgers)
+        set_initial_conditions!(burgers)
+        Checkpointing.reset(revolve)
+        dburgers = Zygote.gradient(final_energy, burgers, revolve)
+    end
     # autodiff(final_energy, Active, Duplicated(burgers, dburgers))
 
     vel = sqrt.(
@@ -117,7 +126,7 @@ function main(Nx::Int64, Ny::Int64, tsteps::Int64, μ::Float64, dx::Float64, dy:
 
 end
 MPI.Init()
-scaling = 10
+scaling = 1
 
 Nx = 100*scaling
 Ny = 100*scaling
@@ -125,12 +134,12 @@ tsteps = 1000*scaling
 
 μ = 0.01 # # U * L / Re,   nu
 
-dx = 1e-2
-dy = 1e-2
-dt = 1e-3
+dx = 1e-1
+dy = 1e-1
+dt = 1e-3 # dt < 0.5 * dx^2
 main(Nx, Ny, tsteps, μ, dx, dy, dt)
-main(Nx, Ny, tsteps, μ, dx, dy, dt)
-main(Nx, Ny, tsteps, μ, dx, dy, dt;profile=true)
+# main(Nx, Ny, tsteps, μ, dx, dy, dt)
+# main(Nx, Ny, tsteps, μ, dx, dy, dt;profile=true)
 
 if !isinteractive()
     MPI.Finalize()
