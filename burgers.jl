@@ -56,7 +56,13 @@ function set_initial_conditions!(burgers::Burgers)
 end
 
 # Create object from struct.
-function main(Nx::Int64, Ny::Int64, tsteps::Int64, μ::Float64, dx::Float64, dy::Float64, dt::Float64, snaps::Int64; profile::Bool=false, writedata::Bool=false)
+function main(
+    Nx::Int64, Ny::Int64, tsteps::Int64,
+    μ::Float64, dx::Float64, dy::Float64,
+    dt::Float64, snaps::Int64;
+    profile::Bool=false, writedata::Bool=false,
+    storage=ArrayStorage{Burgers}(snaps)
+)
     burgers = Burgers(Nx, Ny, μ, dx, dy, dt, tsteps)
 
     # Boundary conditions
@@ -108,7 +114,7 @@ function main(Nx::Int64, Ny::Int64, tsteps::Int64, μ::Float64, dx::Float64, dy:
     burgers = Burgers(Nx, Ny, μ, dx, dy, dt, tsteps)
     set_boundary_conditions!(burgers)
     set_initial_conditions!(burgers)
-    revolve = Revolve{Burgers}(tsteps, snaps; verbose=1)
+    revolve = Revolve{Burgers}(tsteps, snaps; verbose=1, storage=storage)
     # dburgers = Burgers(Nx, Ny, μ, ν, tsteps)
 
     @time begin
