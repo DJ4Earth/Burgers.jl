@@ -44,12 +44,12 @@ function set_initial_conditions!(burgers::Burgers)
     ny = burgers.ny
     @inbounds for i in 1:size(lastu, 1)
         @inbounds for j in 1:size(lastu, 2)
-            lastu[i,j] = sin(get_gx(burgers, i))
-            lastv[i,j] = sin(get_gy(burgers, j))
+            lastu[i,j] = exp(-get_gx(burgers, i)^2 - get_gy(burgers, j)^2)
+            lastv[i,j] = exp(-get_gx(burgers, i)^2 - get_gy(burgers, j)^2)
         end
         @inbounds for j in 1:size(lastu, 2)
-            nextu[i,j] = sin(get_gx(burgers, i))
-            nextv[i,j] = sin(get_gy(burgers, j))
+            nextu[i,j] = exp(-get_gx(burgers, i)^2 - get_gy(burgers, j)^2)
+            nextv[i,j] = exp(-get_gx(burgers, i)^2 - get_gy(burgers, j)^2)
         end
     end
     return nothing
@@ -69,9 +69,9 @@ function main(
     set_initial_conditions!(burgers)
     set_boundary_conditions!(burgers)
 
-    vel = sqrt.(
-    burgers.nextu[2:end-1,2:end-1].^2 +
-    burgers.nextv[2:end-1,2:end-1].^2
+    vel = (
+        burgers.nextu[2:end-1,2:end-1].^2 +
+        burgers.nextv[2:end-1,2:end-1].^2
     )
     if writedata
         save("IC.jld", "vel", vel, "u", burgers.nextu, "v", burgers.nextv)
@@ -102,9 +102,9 @@ function main(
     # PProf.pprof()
     # end
 
-    vel = sqrt.(
-    burgers.nextu[2:end-1,2:end-1].^2 +
-    burgers.nextv[2:end-1,2:end-1].^2
+    vel = (
+        burgers.nextu[2:end-1,2:end-1].^2 +
+        burgers.nextv[2:end-1,2:end-1].^2
     )
     if writedata
         save("final.jld", "vel", vel, "u", burgers.nextu, "v", burgers.nextv)
@@ -125,9 +125,9 @@ function main(
     end
     # autodiff(final_energy, Active, Duplicated(burgers, dburgers))
 
-    vel = sqrt.(
-    dburgers[1].lastu.^2 +
-    dburgers[1].lastv.^2
+    vel = (
+        dburgers[1].lastu.^2 +
+        dburgers[1].lastv.^2
     )
     if burgers.rank == 0
         println("Norm of energy with respect to initial velocity norm(dE/dv0) = $(norm(vel))")
