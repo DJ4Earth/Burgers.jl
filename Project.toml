@@ -1,11 +1,27 @@
+name = "DiffDistPDE"
+uuid = "a59e61b1-9214-47eb-a2c0-85bc0a55eddf"
+authors = ["Michel Schanen <mschanen@anl.gov>", "Sarah Williamson <swilliamson@utexas.edu>"]
+version = "0.1.0"
+
 [deps]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 Checkpointing = "eb46d486-4f9c-4c3d-b445-a617f2a2f1ca"
 Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 JLD = "4138dd39-2aa7-5051-a626-17a0bb65d9c8"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195"
 MPIPreferences = "3da0fdf6-3ccc-4f1b-acd9-58baa6c99267"
 PProf = "e4faabce-9ead-11e9-39d9-4379958e3056"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
+
+[compat]
+BenchmarkTools = "1.3"
+ChainRulesCore = "1.15"
+Checkpointing = "0.6.3"
+Enzyme = "0.10"
+julia = "1.8"
+MPI = "=0.20.5"
+Plots = "1.38"
+Zygote = "0.6"

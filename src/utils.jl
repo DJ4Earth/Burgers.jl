@@ -1,3 +1,5 @@
+export get_y, get_x, get_l, get_r, get_u, get_d
+
 get_y(rank::Int, side::Int) = div(rank, side)
 get_x(rank::Int, side::Int) = mod(rank, side)
 get_l(rank::Int, side::Int) = rank-1
@@ -23,15 +25,4 @@ function partition(nx::Int, ny::Int, rank::Int, np::Int)
     nry = get_y(rank,side) == side-1 ? n2y-1 : n2y
     nylocal = nry-nly+1
     return nxlocal, nylocal, side
-end
-# get global coordinates
-
-function get_gx(burgers::Burgers, x::Int64)
-    dx = 6.0 / (burgers.Nx-1)
-    return (get_x(burgers.rank, burgers.side) * (burgers.nx-2) + x-1) * dx - 3.0
-end
-
-function get_gy(burgers::Burgers, y::Int64)
-    dy = 6.0 / (burgers.Ny-1)
-    return (get_y(burgers.rank, burgers.side) * (burgers.ny-2) + y-1) * dy - 3.0
 end
