@@ -1,12 +1,12 @@
-include("header.jl")
-include("utils.jl")
-include("advance.jl")
-include("halo.jl")
-include("energy.jl")
-include("dreduction.jl")
 using Profile
 using PProf
 using JLD
+using DiffDistPDE
+using MPI
+using Checkpointing
+using Zygote
+using LinearAlgebra
+
 function set_boundary_conditions!(burgers::Burgers)
     rank = burgers.rank
     side = burgers.side
@@ -138,4 +138,26 @@ function main(
     # heatmap(vel)
     # heatmap(dburgers[1].lastu[2:end-1,2:end-1])
 
+end
+
+
+MPI.Init()
+scaling = 1
+
+Nx = 100*scaling
+Ny = 100*scaling
+tsteps = 1000*scaling
+
+μ = 0.01 # # U * L / Re,   nu
+
+dx = 1e-1
+dy = 1e-1
+dt = 1e-3 # dt < 0.5 * dx^2
+
+snaps = 100
+println("Running Burgers with Nx = $Nx, Ny = $Ny, tsteps = $tsteps, μ = $μ, dx = $dx, dy = $dy, dt = $dt, snaps = $snaps")
+main(Nx, Ny, tsteps, μ, dx, dy, dt, snaps)
+
+if !isinteractive()
+    MPI.Finalize()
 end

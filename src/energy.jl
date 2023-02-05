@@ -1,3 +1,5 @@
+export energy, final_energy
+
 function energy(burgers::Burgers)
     @inbounds lenergy = sum(
         burgers.nextu[2:end-1,2:end-1].^2 .+
@@ -42,5 +44,5 @@ function final_energy(
     MPI.SUM,
     burgers.comm
     )
-    return genergy/(float(Nx * Ny))
+    return genergy / (burgers.Nx * burgers.Ny)
 end
