@@ -1,9 +1,3 @@
-function advance!(pde::DistPDE{PT}) where {PT}
-    stencil!(pde)
-    update_bc!(pde)
-    return nothing
-end
-
 function halo!(pde::DistPDE{PT}) where {PT}
     @unpack nextu, nextv, rank, side, nx, ny, comm = pde
     @unpack bufrul, bufrur, bufrud, bufruu, bufrvl, bufrvr, bufrvd, bufrvu = pde

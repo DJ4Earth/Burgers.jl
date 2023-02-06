@@ -8,21 +8,9 @@ using PProf
 using Profile
 using Zygote
 
-struct Burgers <: AbstractPDE end
+struct Burgers <: AbstractDistPDE end
 
-# get global coordinates
-
-function get_gx(burgers::DistPDE{Burgers}, x::Int64)
-    dx = 6.0 / (burgers.Nx-1)
-    return (get_x(burgers.rank, burgers.side) * (burgers.nx-2) + x-1) * dx - 3.0
-end
-
-function get_gy(burgers::DistPDE{Burgers}, y::Int64)
-    dy = 6.0 / (burgers.Ny-1)
-    return (get_y(burgers.rank, burgers.side) * (burgers.ny-2) + y-1) * dy - 3.0
-end
-
-function set_boundary_conditions!(burgers::DistPDE{Burgers})
+function DiffDistPDE.set_boundary_conditions!(burgers::DistPDE{Burgers})
     @unpack rank, side, lastu, lastv, nx, ny = burgers
     if get_x(rank, side) == 0
         lastu[1:1,1:ny] .= 0.0
@@ -48,7 +36,6 @@ function DiffDistPDE.stencil!(burgers::DistPDE{Burgers})
     @unpack lastu, nextu, lastv, nextv, dx, dy, dt, μ, nx, ny = burgers
     @inbounds for i in 2:(nx-1)
         @inbounds for j in 2:(ny-1)
-
             nextu[i,j] = lastu[i,j] + dt * ( (
             - lastu[i,j]/(2*dx)*(lastu[i+1,j]-lastu[i-1,j])
             - lastv[i,j]/(2*dy)*(lastu[i,j+1]-lastu[i,j-1])
@@ -72,24 +59,25 @@ function DiffDistPDE.stencil!(burgers::DistPDE{Burgers})
 end
 
 function set_initial_conditions!(burgers::DistPDE{Burgers})
-    rank = burgers.rank
-    side = burgers.side
-    lastu = burgers.lastu
-    lastv = burgers.lastv
-    nextu = burgers.nextu
-    nextv = burgers.nextv
-    nx = burgers.nx
-    ny = burgers.ny
-    @inbounds for i in 1:size(lastu, 1)
-        @inbounds for j in 1:size(lastu, 2)
+    function get_gx(burgers::DistPDE{Burgers}, x::Int64)
+        dx = 6.0 / (burgers.Nx-1)
+        return (get_x(burgers.rank, burgers.side) * (burgers.nx-2) + x-1) * dx - 3.0
+    end
+
+    function get_gy(burgers::DistPDE{Burgers}, y::Int64)
+        dy = 6.0 / (burgers.Ny-1)
+        return (get_y(burgers.rank, burgers.side) * (burgers.ny-2) + y-1) * dy - 3.0
+    end
+    @unpack lastu, lastv, nextu, nextv, nx, ny = burgers
+    @inbounds for i in 1:nx
+        @inbounds for j in 1:ny
             lastu[i,j] = exp(-get_gx(burgers, i)^2 - get_gy(burgers, j)^2)
             lastv[i,j] = exp(-get_gx(burgers, i)^2 - get_gy(burgers, j)^2)
-        end
-        @inbounds for j in 1:size(lastu, 2)
             nextu[i,j] = exp(-get_gx(burgers, i)^2 - get_gy(burgers, j)^2)
             nextv[i,j] = exp(-get_gx(burgers, i)^2 - get_gy(burgers, j)^2)
         end
     end
+    @pack! burgers = lastu, lastv, nextu, nextv
     return nothing
 end
 
@@ -193,7 +181,3 @@ dt = 1e-3 # dt < 0.5 * dx^2
 snaps = 100
 println("Running Burgers with Nx = $Nx, Ny = $Ny, tsteps = $tsteps, μ = $μ, dx = $dx, dy = $dy, dt = $dt, snaps = $snaps")
 burgers(Nx, Ny, tsteps, μ, dx, dy, dt, snaps)
-
-if !isinteractive()
-    MPI.Finalize()
-end
