@@ -3,17 +3,27 @@ using DiffDistPDE
 using JLD
 using LinearAlgebra
 using MPI
+using Parameters
 using PProf
 using Profile
 using Zygote
 
-function set_boundary_conditions!(burgers::Burgers)
-    rank = burgers.rank
-    side = burgers.side
-    lastu = burgers.lastu
-    lastv = burgers.lastv
-    nx = burgers.nx
-    ny = burgers.ny
+struct Burgers <: AbstractPDE end
+
+# get global coordinates
+
+function get_gx(burgers::DistPDE{Burgers}, x::Int64)
+    dx = 6.0 / (burgers.Nx-1)
+    return (get_x(burgers.rank, burgers.side) * (burgers.nx-2) + x-1) * dx - 3.0
+end
+
+function get_gy(burgers::DistPDE{Burgers}, y::Int64)
+    dy = 6.0 / (burgers.Ny-1)
+    return (get_y(burgers.rank, burgers.side) * (burgers.ny-2) + y-1) * dy - 3.0
+end
+
+function set_boundary_conditions!(burgers::DistPDE{Burgers})
+    @unpack rank, side, lastu, lastv, nx, ny = burgers
     if get_x(rank, side) == 0
         lastu[1:1,1:ny] .= 0.0
         lastv[1:1,1:ny] .= 0.0
@@ -30,10 +40,38 @@ function set_boundary_conditions!(burgers::Burgers)
         lastu[1:nx,ny:ny] .= 0.0
         lastv[1:nx,ny:ny] .= 0.0
     end
+    @pack! burgers = lastu, lastv
     return nothing
 end
 
-function set_initial_conditions!(burgers::Burgers)
+function DiffDistPDE.stencil!(burgers::DistPDE{Burgers})
+    @unpack lastu, nextu, lastv, nextv, dx, dy, dt, μ, nx, ny = burgers
+    @inbounds for i in 2:(nx-1)
+        @inbounds for j in 2:(ny-1)
+
+            nextu[i,j] = lastu[i,j] + dt * ( (
+            - lastu[i,j]/(2*dx)*(lastu[i+1,j]-lastu[i-1,j])
+            - lastv[i,j]/(2*dy)*(lastu[i,j+1]-lastu[i,j-1])
+            ) +
+            μ * (
+            (lastu[i+1,j]-2*lastu[i,j]+ lastu[i-1,j])/dx^2 +
+            (lastu[i,j+1]-2*lastu[i,j]+ lastu[i,j-1])/dy^2
+            ) )
+
+            nextv[i,j] = lastv[i,j] + dt * ( (
+            - lastu[i,j]/(2*dx)*(lastv[i+1,j]-lastv[i-1,j])
+            - lastv[i,j]/(2*dy)*(lastv[i,j+1]-lastv[i,j-1])
+            ) +
+            μ * (
+            (lastv[i+1,j]-2*lastv[i,j]+ lastv[i-1,j])/dx^2 +
+            (lastv[i,j+1]-2*lastv[i,j]+ lastv[i,j-1])/dy^2
+            ) )
+        end
+    end
+    @pack! burgers = nextu, nextv
+end
+
+function set_initial_conditions!(burgers::DistPDE{Burgers})
     rank = burgers.rank
     side = burgers.side
     lastu = burgers.lastu
@@ -61,9 +99,9 @@ function burgers(
     μ::Float64, dx::Float64, dy::Float64,
     dt::Float64, snaps::Int64;
     profile::Bool=false, writedata::Bool=false,
-    storage=ArrayStorage{Burgers}(snaps)
+    storage=ArrayStorage{DistPDE{Burgers}}(snaps)
 )
-    burgers = Burgers(Nx, Ny, μ, dx, dy, dt, tsteps)
+    burgers = DistPDE{Burgers}(Nx, Ny, μ, dx, dy, dt, tsteps)
 
     # Boundary conditions
     set_initial_conditions!(burgers)
@@ -111,10 +149,10 @@ function burgers(
     end
     # heatmap(vel)
 
-    burgers = Burgers(Nx, Ny, μ, dx, dy, dt, tsteps)
+    burgers = DistPDE{Burgers}(Nx, Ny, μ, dx, dy, dt, tsteps)
     set_boundary_conditions!(burgers)
     set_initial_conditions!(burgers)
-    revolve = Revolve{Burgers}(tsteps, snaps; verbose=1, storage=storage)
+    revolve = Revolve{DistPDE{Burgers}}(tsteps, snaps; verbose=1, storage=storage)
 
     @time begin
         set_boundary_conditions!(burgers)
@@ -139,23 +177,23 @@ function burgers(
 end
 
 
-# MPI.Init()
-# scaling = 1
+MPI.Init()
+scaling = 1
 
-# Nx = 100*scaling
-# Ny = 100*scaling
-# tsteps = 1000*scaling
+Nx = 100*scaling
+Ny = 100*scaling
+tsteps = 1000*scaling
 
-# μ = 0.01 # # U * L / Re,   nu
+μ = 0.01 # # U * L / Re,   nu
 
-# dx = 1e-1
-# dy = 1e-1
-# dt = 1e-3 # dt < 0.5 * dx^2
+dx = 1e-1
+dy = 1e-1
+dt = 1e-3 # dt < 0.5 * dx^2
 
-# snaps = 100
-# println("Running Burgers with Nx = $Nx, Ny = $Ny, tsteps = $tsteps, μ = $μ, dx = $dx, dy = $dy, dt = $dt, snaps = $snaps")
-# burgers(Nx, Ny, tsteps, μ, dx, dy, dt, snaps)
+snaps = 100
+println("Running Burgers with Nx = $Nx, Ny = $Ny, tsteps = $tsteps, μ = $μ, dx = $dx, dy = $dy, dt = $dt, snaps = $snaps")
+burgers(Nx, Ny, tsteps, μ, dx, dy, dt, snaps)
 
-# if !isinteractive()
-#     MPI.Finalize()
-# end
+if !isinteractive()
+    MPI.Finalize()
+end
