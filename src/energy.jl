@@ -1,48 +1,50 @@
 export energy, final_energy
 
-function energy(burgers::Burgers)
+function energy(
+    pde::DistPDE{PT},
+) where {PT}
     @inbounds lenergy = sum(
-        burgers.nextu[2:end-1,2:end-1].^2 .+
-        burgers.nextv[2:end-1,2:end-1].^2
+        pde.nextu[2:end-1,2:end-1].^2 .+
+        pde.nextv[2:end-1,2:end-1].^2
     )
     genergy = MPI.Allreduce(
     lenergy,
     MPI.SUM,
-    burgers.comm
+    pde.comm
     )
-    return genergy/(burgers.Nx * burgers.Ny)
+    return genergy/(pde.Nx * pde.Ny)
 end
 
 function final_energy(
-    burgers::Burgers,
-    )
-    for i in 1:burgers.tsteps
-        advance(burgers)
-        halo(burgers)
-        copyto!(burgers.lastu, burgers.nextu)
-        copyto!(burgers.lastv, burgers.nextv)
+    pde::DistPDE{PT},
+) where {PT}
+    for i in 1:pde.tsteps
+        advance!(pde)
+        halo!(pde)
+        copyto!(pde.lastu, pde.nextu)
+        copyto!(pde.lastv, pde.nextv)
     end
-    return energy(burgers)
+    return energy(pde)
 end
 
 function final_energy(
-    burgers::Burgers,
+    pde::DistPDE{PT},
     chkpscheme::Scheme,
-    )
-    @checkpoint_struct chkpscheme burgers for i in 1:burgers.tsteps
-        advance(burgers)
-        halo(burgers)
-        copyto!(burgers.lastu, burgers.nextu)
-        copyto!(burgers.lastv, burgers.nextv)
+) where {PT}
+    @checkpoint_struct chkpscheme pde for i in 1:pde.tsteps
+        advance!(pde)
+        halo!(pde)
+        copyto!(pde.lastu, pde.nextu)
+        copyto!(pde.lastv, pde.nextv)
     end
     @inbounds lenergy = sum(
-    burgers.nextu[2:end-1,2:end-1].^2 .+
-    burgers.nextv[2:end-1,2:end-1].^2
+    pde.nextu[2:end-1,2:end-1].^2 .+
+    pde.nextv[2:end-1,2:end-1].^2
     )
     genergy = MPI.Allreduce(
     lenergy,
     MPI.SUM,
-    burgers.comm
+    pde.comm
     )
-    return genergy / (burgers.Nx * burgers.Ny)
+    return genergy / (pde.Nx * pde.Ny)
 end
