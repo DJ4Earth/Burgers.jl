@@ -21,8 +21,4 @@ rank = MPI.Comm_rank(MPI.COMM_WORLD)
 if rank == 0
     println("Running Burgers with Nx = $Nx, Ny = $Ny, tsteps = $tsteps, μ = $μ, dx = $dx, dy = $dy, dt = $dt, snaps = $snaps")
 end
-main(Nx, Ny, tsteps, μ, dx, dy, dt, snaps; writedata = true)
-
-if !isinteractive()
-    MPI.Finalize()
-end
+burgers(Nx, Ny, tsteps, μ, dx, dy, dt, snaps; writedata = true)

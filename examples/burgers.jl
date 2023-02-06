@@ -8,7 +8,7 @@ using PProf
 using Profile
 using Zygote
 
-struct Burgers <: AbstractDistPDE end
+struct Burgers <: AbstractPDE end
 
 function DiffDistPDE.set_boundary_conditions!(burgers::DistPDE{Burgers})
     @unpack rank, side, lastu, lastv, nx, ny = burgers
@@ -163,21 +163,3 @@ function burgers(
     # heatmap(dburgers[1].lastu[2:end-1,2:end-1])
     return ienergy, fenergy, norm(dvel)
 end
-
-
-MPI.Init()
-scaling = 1
-
-Nx = 100*scaling
-Ny = 100*scaling
-tsteps = 1000*scaling
-
-μ = 0.01 # # U * L / Re,   nu
-
-dx = 1e-1
-dy = 1e-1
-dt = 1e-3 # dt < 0.5 * dx^2
-
-snaps = 100
-println("Running Burgers with Nx = $Nx, Ny = $Ny, tsteps = $tsteps, μ = $μ, dx = $dx, dy = $dy, dt = $dt, snaps = $snaps")
-burgers(Nx, Ny, tsteps, μ, dx, dy, dt, snaps)

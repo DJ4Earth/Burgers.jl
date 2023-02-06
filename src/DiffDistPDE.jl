@@ -7,11 +7,24 @@ module DiffDistPDE
     using Plots
     using Zygote
 
-    abstract type AbstractDistPDE end
-    export AbstractDistPDE, DistPDE
+    abstract type AbstractPDE end
+    export AbstractPDE, DistPDE
     export set_initial_conditions!, set_boundary_conditions!, advance!, halo!, stencil!, get_gx, get_gy
 
-    @with_kw mutable struct DistPDE{PT <: AbstractDistPDE}
+    """
+    `DistPDE{PT}` is a distributed PDE solver for a PDE of type `PT`.
+
+    `lastu`, `nextu`, `lastv`, `nextv` are the fields of the PDE.
+    `nx` and `ny` are the local grid dimensions.
+    `Nx` and `Ny` are the global grid dimensions.
+    `μ` is the diffusion coefficient.
+    `tsteps` is the number of time steps.
+    `np` is the number of processes.
+    `side` is the number of processes in each dimension.
+    `rank` is the rank of the process.
+    `bufxxx` are the buffers for halo exchange.
+    """
+    @with_kw mutable struct DistPDE{PT <: AbstractPDE}
         nextu::Matrix{Float64}
         nextv::Matrix{Float64}
         lastu::Matrix{Float64}
@@ -51,7 +64,18 @@ module DiffDistPDE
         bufsvu::Vector{Float64}
     end
 
+"""
+    `DistPDE{PT}(
+        Nx::Int, Ny::Int,
+        μ::Float64,
+        dx::Float64, dy::Float64,
+        dt::Float64, tsteps::Int;
+        comm::MPI.Comm = MPI.COMM_WORLD)`
 
+    Constructs a distributed PDE solver of type `PT` with `Nx` and `Ny` grid
+    points, `μ` diffusion coefficient, `dx` and `dy` grid spacings, `dt` time
+    step, `tsteps` number of time steps, and `comm` MPI communicator.
+    """
     function DistPDE{PT}(
         Nx::Int,
         Ny::Int,
@@ -61,7 +85,7 @@ module DiffDistPDE
         dt::Float64,
         tsteps::Int;
         comm::MPI.Comm = MPI.COMM_WORLD
-    ) where {PT <: AbstractDistPDE}
+    ) where {PT <: AbstractPDE}
         comm = MPI.COMM_WORLD
         np = MPI.Comm_size(comm)
         rank = MPI.Comm_rank(comm)
@@ -100,31 +124,66 @@ module DiffDistPDE
         )
     end
 
-    function set_initial_conditions!(pde::AbstractDistPDE)
+    """
+        set_initial_conditions!(pde::DistPDE{AbstractPDE})
+
+    Set the initial conditions for the PDE.
+    """
+    function set_initial_conditions!(pde::DistPDE{AbstractPDE})
         error("set_initial_conditions! not implemented for $(typeof(pde))")
     end
 
-    function set_boundary_conditions!(pde::AbstractDistPDE)
+    """
+        set_boundary_conditions!(pde::DistPDE{AbstractPDE})
+
+    Set the boundary conditions for the PDE.
+    """
+    function set_boundary_conditions!(pde::DistPDE{AbstractPDE})
         error("set_boundary_conditions! not implemented for $(typeof(pde))")
     end
 
-    function advance!(pde::AbstractDistPDE)
+    """
+        advance!(pde::DistPDE{AbstractPDE})
+
+    Advance the PDE by one time step.
+    """
+    function advance!(pde::DistPDE{AbstractPDE})
         error("advance! not implemented for $(typeof(pde))")
     end
 
-    function halo!(pde::AbstractDistPDE)
+    """
+        halo!(pde::DistPDE{AbstractPDE})
+
+    Exchange halo regions between neighboring processes.
+    """
+    function halo!(pde::DistPDE{AbstractPDE})
         error("halo! not implemented for $(typeof(pde))")
     end
 
-    function stencil!(pde::AbstractDistPDE)
+    """
+        stencil!(pde::DistPDE{AbstractPDE})
+
+    Apply the stencil to the PDE.
+    """
+    function stencil!(pde::DistPDE{AbstractPDE})
         error("stencil! not implemented for $(typeof(pde))")
     end
 
-    function get_gx(pde::AbstractDistPDE, i::Int64)
+    """
+        get_gx(pde::DistPDE{AbstractPDE}, i::Int64)
+
+    Get the x-value at local index `i`.
+    """
+    function get_gx(pde::DistPDE{AbstractPDE}, i::Int64)
         error("get_gx not implemented for $(typeof(pde))")
     end
 
-    function get_gy(pde::AbstractDistPDE, i::Int64)
+    """
+        get_gy(pde::DistPDE{AbstractPDE}, i::Int64)
+
+    Get the y-value at local index `i`.
+    """
+    function get_gy(pde::DistPDE{AbstractPDE}, i::Int64)
         error("get_gy not implemented for $(typeof(pde))")
     end
 
