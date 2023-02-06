@@ -1,11 +1,11 @@
-using Profile
-using PProf
-using JLD
-using DiffDistPDE
-using MPI
 using Checkpointing
-using Zygote
+using DiffDistPDE
+using JLD
 using LinearAlgebra
+using MPI
+using PProf
+using Profile
+using Zygote
 
 function set_boundary_conditions!(burgers::Burgers)
     rank = burgers.rank
@@ -56,7 +56,7 @@ function set_initial_conditions!(burgers::Burgers)
 end
 
 # Create object from struct.
-function main(
+function burgers(
     Nx::Int64, Ny::Int64, tsteps::Int64,
     μ::Float64, dx::Float64, dy::Float64,
     dt::Float64, snaps::Int64;
@@ -115,7 +115,6 @@ function main(
     set_boundary_conditions!(burgers)
     set_initial_conditions!(burgers)
     revolve = Revolve{Burgers}(tsteps, snaps; verbose=1, storage=storage)
-    # dburgers = Burgers(Nx, Ny, μ, ν, tsteps)
 
     @time begin
         set_boundary_conditions!(burgers)
@@ -123,41 +122,40 @@ function main(
         Checkpointing.reset(revolve)
         dburgers = Zygote.gradient(final_energy, burgers, revolve)
     end
-    # autodiff(final_energy, Active, Duplicated(burgers, dburgers))
 
-    vel = (
+    dvel = (
         dburgers[1].lastu.^2 +
         dburgers[1].lastv.^2
     )
     if burgers.rank == 0
-        println("Norm of energy with respect to initial velocity norm(dE/dv0) = $(norm(vel))")
+        println("Norm of energy with respect to initial velocity norm(dE/dv0) = $(norm(dvel))")
     end
     if writedata
         save("adjoints.jld", "dvel", vel, "du", dburgers[1].lastu, "dv", dburgers[1].lastv)
     end
-    # heatmap(vel)
+    # heatmap(dvel)
     # heatmap(dburgers[1].lastu[2:end-1,2:end-1])
-
+    return ienergy, fenergy, norm(dvel)
 end
 
 
-MPI.Init()
-scaling = 1
+# MPI.Init()
+# scaling = 1
 
-Nx = 100*scaling
-Ny = 100*scaling
-tsteps = 1000*scaling
+# Nx = 100*scaling
+# Ny = 100*scaling
+# tsteps = 1000*scaling
 
-μ = 0.01 # # U * L / Re,   nu
+# μ = 0.01 # # U * L / Re,   nu
 
-dx = 1e-1
-dy = 1e-1
-dt = 1e-3 # dt < 0.5 * dx^2
+# dx = 1e-1
+# dy = 1e-1
+# dt = 1e-3 # dt < 0.5 * dx^2
 
-snaps = 100
-println("Running Burgers with Nx = $Nx, Ny = $Ny, tsteps = $tsteps, μ = $μ, dx = $dx, dy = $dy, dt = $dt, snaps = $snaps")
-main(Nx, Ny, tsteps, μ, dx, dy, dt, snaps)
+# snaps = 100
+# println("Running Burgers with Nx = $Nx, Ny = $Ny, tsteps = $tsteps, μ = $μ, dx = $dx, dy = $dy, dt = $dt, snaps = $snaps")
+# burgers(Nx, Ny, tsteps, μ, dx, dy, dt, snaps)
 
-if !isinteractive()
-    MPI.Finalize()
-end
+# if !isinteractive()
+#     MPI.Finalize()
+# end
