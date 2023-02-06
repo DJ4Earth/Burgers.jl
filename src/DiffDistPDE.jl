@@ -7,11 +7,11 @@ module DiffDistPDE
     using Plots
     using Zygote
 
-    abstract type AbstractPDE end
-    export AbstractPDE, DistPDE
-    export set_initial_conditions!, set_boundary_conditions!, advance!, halo!, get_gx, get_gy, copy_fields!
+    abstract type AbstractDistPDE end
+    export AbstractDistPDE, DistPDE
+    export set_initial_conditions!, set_boundary_conditions!, advance!, halo!, stencil!, get_gx, get_gy
 
-    @with_kw mutable struct DistPDE{PT <: AbstractPDE}
+    @with_kw mutable struct DistPDE{PT <: AbstractDistPDE}
         nextu::Matrix{Float64}
         nextv::Matrix{Float64}
         lastu::Matrix{Float64}
@@ -61,7 +61,7 @@ module DiffDistPDE
         dt::Float64,
         tsteps::Int;
         comm::MPI.Comm = MPI.COMM_WORLD
-    ) where {PT <: AbstractPDE}
+    ) where {PT <: AbstractDistPDE}
         comm = MPI.COMM_WORLD
         np = MPI.Comm_size(comm)
         rank = MPI.Comm_rank(comm)
@@ -100,39 +100,36 @@ module DiffDistPDE
         )
     end
 
-    function set_initial_conditions!(pde::AbstractPDE)
+    function set_initial_conditions!(pde::AbstractDistPDE)
         error("set_initial_conditions! not implemented for $(typeof(pde))")
     end
 
-    function set_boundary_conditions!(pde::AbstractPDE)
+    function set_boundary_conditions!(pde::AbstractDistPDE)
         error("set_boundary_conditions! not implemented for $(typeof(pde))")
     end
 
-    function advance!(pde::AbstractPDE)
+    function advance!(pde::AbstractDistPDE)
         error("advance! not implemented for $(typeof(pde))")
     end
 
-    function halo!(pde)
+    function halo!(pde::AbstractDistPDE)
         error("halo! not implemented for $(typeof(pde))")
     end
 
-    function stencil!(pde)
+    function stencil!(pde::AbstractDistPDE)
         error("stencil! not implemented for $(typeof(pde))")
     end
 
-    function get_gx(pde::AbstractPDE, i::Int64)
+    function get_gx(pde::AbstractDistPDE, i::Int64)
         error("get_gx not implemented for $(typeof(pde))")
     end
 
-    function get_gy(pde::AbstractPDE, i::Int64)
+    function get_gy(pde::AbstractDistPDE, i::Int64)
         error("get_gy not implemented for $(typeof(pde))")
     end
 
-    function copy_fields!(dest::AbstractPDE, src::AbstractPDE)
-        error("copy_fields! not implemented for $(typeof(src))")
-    end
-
-    include("Burgers.jl")
+    include("advance.jl")
+    include("halo.jl")
     include("utils.jl")
     include("energy.jl")
     include("dreduction.jl")

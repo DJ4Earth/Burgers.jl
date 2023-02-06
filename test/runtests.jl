@@ -10,7 +10,7 @@ using Zygote
 
 @testset "Testing adjoint Burgers with Gaussian intiatial conditions" begin
 
-    include("../examples/gaussian_ic.jl")
+    include("../examples/burgers.jl")
 
     MPI.Init()
     scaling = 1
@@ -31,8 +31,4 @@ using Zygote
     @test ienergy ≈ 0.0855298595153226
     @test fenergy ≈ 0.08426001732938161
     @test ndvel ≈ 1.3020729832060115e-6
-
-    if !isinteractive()
-        MPI.Finalize()
-    end
 end
