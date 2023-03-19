@@ -58,7 +58,7 @@ function DiffDistPDE.stencil!(burgers::DistPDE{Burgers})
     @pack! burgers = nextu, nextv
 end
 
-function set_initial_conditions!(burgers::DistPDE{Burgers})
+function DiffDistPDE.set_initial_conditions!(burgers::DistPDE{Burgers})
     function get_gx(burgers::DistPDE{Burgers}, x::Int64)
         dx = 6.0 / (burgers.Nx-1)
         return (get_x(burgers.rank, burgers.side) * (burgers.nx-2) + x-1) * dx - 3.0
@@ -85,9 +85,8 @@ end
 function burgers(
     Nx::Int64, Ny::Int64, tsteps::Int64,
     μ::Float64, dx::Float64, dy::Float64,
-    dt::Float64, snaps::Int64;
-    profile::Bool=false, writedata::Bool=false,
-    storage=ArrayStorage{DistPDE{Burgers}}(snaps)
+    dt::Float64;
+    profile::Bool=false, writedata::Bool=false
 )
     burgers = DistPDE{Burgers}(Nx, Ny, μ, dx, dy, dt, tsteps)
 
@@ -115,11 +114,11 @@ function burgers(
     # Profile.Allocs.@profile begin
     # Profile.clear()
     # Profile.@profile begin
-    @time begin
-        set_boundary_conditions!(burgers)
-        set_initial_conditions!(burgers)
-        global fenergy = final_energy(burgers)
-    end
+    # @time begin
+    set_boundary_conditions!(burgers)
+    set_initial_conditions!(burgers)
+    fenergy = final_energy(burgers)
+    # end
     if burgers.rank == 0
         println("[$rank] Final energy E = $fenergy")
     end
@@ -136,7 +135,16 @@ function burgers(
         save("final.jld", "vel", vel, "u", burgers.nextu, "v", burgers.nextv)
     end
     # heatmap(vel)
+    return ienergy, fenergy
+end
 
+function burgers_adjoint(
+    Nx::Int64, Ny::Int64, tsteps::Int64,
+    μ::Float64, dx::Float64, dy::Float64,
+    dt::Float64, snaps::Int64;
+    profile::Bool=false, writedata::Bool=false,
+    storage=ArrayStorage{DistPDE{Burgers}}(snaps)
+)
     burgers = DistPDE{Burgers}(Nx, Ny, μ, dx, dy, dt, tsteps)
     set_boundary_conditions!(burgers)
     set_initial_conditions!(burgers)
@@ -161,5 +169,37 @@ function burgers(
     end
     # heatmap(dvel)
     # heatmap(dburgers[1].lastu[2:end-1,2:end-1])
-    return ienergy, fenergy, norm(dvel)
+    return norm(dvel), dburgers
+end
+
+function main()
+    MPI.Init()
+    scaling = 1
+
+    Nx = 100*scaling
+    Ny = 100*scaling
+    tsteps = 1000*scaling
+
+    μ = 0.01 # # U * L / Re,   nu
+
+    dx = 1e-1
+    dy = 1e-1
+    dt = 1e-3 # dt < 0.5 * dx^2
+
+    snaps = 100
+    println("Running Burgers with Nx = $Nx, Ny = $Ny, tsteps = $tsteps, μ = $μ, dx = $dx, dy = $dy, dt = $dt, snaps = $snaps")
+    ienergy, fenergy = burgers(Nx, Ny, tsteps, μ, dx, dy, dt)
+    dlastu = Float64[]
+    for h in [1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8, 1e-9, 1e-10]
+        hburgers = DistPDE{Burgers}(Nx, Ny, μ, dx, dy, dt, tsteps)
+        set_initial_conditions!(hburgers)
+        set_boundary_conditions!(hburgers)
+        hburgers.lastu[55,46] += h
+        push!(dlastu, (final_energy(hburgers) - fenergy)/h)
+    end
+    ndvel, dburgers = burgers_adjoint(Nx, Ny, tsteps, μ, dx, dy, dt, snaps)
+    @assert ienergy ≈ 0.0855298595153226
+    @assert fenergy ≈ 0.08426001732938161
+    @assert ndvel ≈ 1.3020729832060115e-6
+    @assert isapprox(dlastu[2], dburgers[1].lastu[55,46], atol=1e-8)
 end
