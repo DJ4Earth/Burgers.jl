@@ -5,7 +5,6 @@ module DiffDistPDE
     using MPI
     using Parameters
     using Plots
-    using Zygote
 
     abstract type AbstractPDE end
     export AbstractPDE, DistPDE
@@ -191,6 +190,5 @@ module DiffDistPDE
     include("halo.jl")
     include("utils.jl")
     include("energy.jl")
-    include("dreduction.jl")
     include("update_bc.jl")
 end

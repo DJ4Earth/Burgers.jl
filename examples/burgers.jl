@@ -1,3 +1,4 @@
+using Enzyme
 using Checkpointing
 using DiffDistPDE
 using JLD
@@ -6,7 +7,7 @@ using MPI
 using Parameters
 using PProf
 using Profile
-using Zygote
+using KernelAbstractions
 
 struct Burgers <: AbstractPDE end
 
@@ -32,29 +33,60 @@ function DiffDistPDE.set_boundary_conditions!(burgers::DistPDE{Burgers})
     return nothing
 end
 
+@kernel function stencil_kernel!(
+    nextu, nextv, lastu, lastv,
+    @Const(dx), @Const(dy), @Const(dt), @Const(μ),
+    @Const(nx), @Const(ny),
+    )
+    i, j = @index(Global, NTuple)
+    if i > 1 && j > 1 && i < nx && j < ny
+        nextu[i,j] = lastu[i,j] + dt * ( (
+        - lastu[i,j]/(2*dx)*(lastu[i+1,j]-lastu[i-1,j])
+        - lastv[i,j]/(2*dy)*(lastu[i,j+1]-lastu[i,j-1])
+        ) +
+        μ * (
+        (lastu[i+1,j]-2*lastu[i,j]+ lastu[i-1,j])/dx^2 +
+        (lastu[i,j+1]-2*lastu[i,j]+ lastu[i,j-1])/dy^2
+        ) )
+
+        nextv[i,j] = lastv[i,j] + dt * ( (
+        - lastu[i,j]/(2*dx)*(lastv[i+1,j]-lastv[i-1,j])
+        - lastv[i,j]/(2*dy)*(lastv[i,j+1]-lastv[i,j-1])
+        ) +
+        μ * (
+        (lastv[i+1,j]-2*lastv[i,j]+ lastv[i-1,j])/dx^2 +
+        (lastv[i,j+1]-2*lastv[i,j]+ lastv[i,j-1])/dy^2
+        ) )
+    end
+end
+
 function DiffDistPDE.stencil!(burgers::DistPDE{Burgers})
     @unpack lastu, nextu, lastv, nextv, dx, dy, dt, μ, nx, ny = burgers
-    @inbounds for i in 2:(nx-1)
-        @inbounds for j in 2:(ny-1)
-            nextu[i,j] = lastu[i,j] + dt * ( (
-            - lastu[i,j]/(2*dx)*(lastu[i+1,j]-lastu[i-1,j])
-            - lastv[i,j]/(2*dy)*(lastu[i,j+1]-lastu[i,j-1])
-            ) +
-            μ * (
-            (lastu[i+1,j]-2*lastu[i,j]+ lastu[i-1,j])/dx^2 +
-            (lastu[i,j+1]-2*lastu[i,j]+ lastu[i,j-1])/dy^2
-            ) )
+    # @show nx, ny
+    # @show size(nextu)
+    stencil_kernel!(CPU())(nextu, nextv, lastu, lastv, dx, dy, dt, μ, nx, ny; ndrange = (nx, ny))
+    synchronize(CPU())
+    # @inbounds for i in 2:(nx-1)
+    #     @inbounds for j in 2:(ny-1)
+    #         nextu[i,j] = lastu[i,j] + dt * ( (
+    #         - lastu[i,j]/(2*dx)*(lastu[i+1,j]-lastu[i-1,j])
+    #         - lastv[i,j]/(2*dy)*(lastu[i,j+1]-lastu[i,j-1])
+    #         ) +
+    #         μ * (
+    #         (lastu[i+1,j]-2*lastu[i,j]+ lastu[i-1,j])/dx^2 +
+    #         (lastu[i,j+1]-2*lastu[i,j]+ lastu[i,j-1])/dy^2
+    #         ) )
 
-            nextv[i,j] = lastv[i,j] + dt * ( (
-            - lastu[i,j]/(2*dx)*(lastv[i+1,j]-lastv[i-1,j])
-            - lastv[i,j]/(2*dy)*(lastv[i,j+1]-lastv[i,j-1])
-            ) +
-            μ * (
-            (lastv[i+1,j]-2*lastv[i,j]+ lastv[i-1,j])/dx^2 +
-            (lastv[i,j+1]-2*lastv[i,j]+ lastv[i,j-1])/dy^2
-            ) )
-        end
-    end
+    #         nextv[i,j] = lastv[i,j] + dt * ( (
+    #         - lastu[i,j]/(2*dx)*(lastv[i+1,j]-lastv[i-1,j])
+    #         - lastv[i,j]/(2*dy)*(lastv[i,j+1]-lastv[i,j-1])
+    #         ) +
+    #         μ * (
+    #         (lastv[i+1,j]-2*lastv[i,j]+ lastv[i-1,j])/dx^2 +
+    #         (lastv[i,j+1]-2*lastv[i,j]+ lastv[i,j-1])/dy^2
+    #         ) )
+    #     end
+    # end
     @pack! burgers = nextu, nextv
 end
 
@@ -146,6 +178,7 @@ function burgers_adjoint(
     storage=ArrayStorage{DistPDE{Burgers}}(snaps)
 )
     burgers = DistPDE{Burgers}(Nx, Ny, μ, dx, dy, dt, tsteps)
+    dburgers = deepcopy(burgers)
     set_boundary_conditions!(burgers)
     set_initial_conditions!(burgers)
     revolve = Revolve{DistPDE{Burgers}}(tsteps, snaps; verbose=1, storage=storage)
@@ -153,13 +186,13 @@ function burgers_adjoint(
     @time begin
         set_boundary_conditions!(burgers)
         set_initial_conditions!(burgers)
-        Checkpointing.reset(revolve)
-        dburgers = Zygote.gradient(final_energy, burgers, revolve)
+        Checkpointing.reset!(revolve)
+        Enzyme.autodiff(Enzyme.ReverseWithPrimal, final_energy, Duplicated(burgers, dburgers), revolve)
     end
 
     dvel = (
-        dburgers[1].lastu.^2 +
-        dburgers[1].lastv.^2
+        dburgers.lastu.^2 +
+        dburgers.lastv.^2
     )
     if burgers.rank == 0
         println("Norm of energy with respect to initial velocity norm(dE/dv0) = $(norm(dvel))")
@@ -200,6 +233,8 @@ function main()
     ndvel, dburgers = burgers_adjoint(Nx, Ny, tsteps, μ, dx, dy, dt, snaps)
     @assert ienergy ≈ 0.0855298595153226
     @assert fenergy ≈ 0.08426001732938161
-    @assert ndvel ≈ 1.3020729832060115e-6
-    @assert isapprox(dlastu[2], dburgers[1].lastu[55,46], atol=1e-8)
+    @assert isapprox(ndvel, 1.3020729832060115e-6, atol=1e-8)
+    @assert isapprox(dlastu[2], dburgers.lastu[55,46], atol=1e-8)
 end
+
+main()

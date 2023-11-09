@@ -20,7 +20,7 @@ function final_energy(
 ) where {PT}
     for i in 1:pde.tsteps
         advance!(pde)
-        halo!(pde)
+        # halo!(pde)
         copyto!(pde.lastu, pde.nextu)
         copyto!(pde.lastv, pde.nextv)
     end
@@ -33,7 +33,7 @@ function final_energy(
 ) where {PT}
     @checkpoint_struct chkpscheme pde for i in 1:pde.tsteps
         advance!(pde)
-        halo!(pde)
+        # halo!(pde)
         copyto!(pde.lastu, pde.nextu)
         copyto!(pde.lastv, pde.nextv)
     end
@@ -41,10 +41,11 @@ function final_energy(
     pde.nextu[2:end-1,2:end-1].^2 .+
     pde.nextv[2:end-1,2:end-1].^2
     )
-    genergy = MPI.Allreduce(
-    lenergy,
-    MPI.SUM,
-    pde.comm
-    )
+    genergy = lenergy
+    # genergy = MPI.Allreduce(
+    # lenergy,
+    # MPI.SUM,
+    # pde.comm
+    # )
     return genergy / (pde.Nx * pde.Ny)
 end
