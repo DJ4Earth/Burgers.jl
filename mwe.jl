@@ -3,17 +3,29 @@ using Enzyme
 using KernelAbstractions
 using CUDA
 
-struct Model{T,MT} where {T,MT}
-    lastu::MT{T}
-    nextu::MT{T}
+const KA = KernelAbstractions
+
+struct Model{MT}
+    lastu::MT
+    nextu::MT
     nx::Int64
     ny::Int64
-    device::KA.Device
+    backend::KA.Backend
 end
 
-function Model(lastu, nextu, nx, ny, device=CPU())
-    _lastu = adapt(device, lastu)
-    _nextu = adapt(device, nextu)
+function Adapt.adapt(backend::KA.Backend, model::Model)
+    Model(
+        adapt(backend, model.lastu),
+        adapt(backend, model.nextu),
+        model.nx,
+        model.ny,
+        backend,
+    )
+end
+
+function Model(lastu, nextu, nx, ny, backend=CPU())
+    _lastu = adapt(backend, lastu)
+    _nextu = adapt(backend, nextu)
     return Model(_lastu, _nextu, nx, ny)
 end
 
@@ -23,13 +35,11 @@ end
 end
 
 function stencil!(model)
-    adapt(device, nextu)
-    adapt(device, lastu)
-    stencil_kernel!(model.device)(
+    stencil_kernel!(model.backend)(
         model.nextu, model.lastu;
         ndrange = (model.nx, model.ny)
     )
-    synchronize(device)
+    KA.synchronize(model.backend)
     return nothing
 end
 
@@ -38,9 +48,12 @@ function main()
     ny = 10
     lastu = ones(nx, ny)
     nextu = copy(lastu)
+
     model_cpu = Model(lastu, nextu, nx, ny)
     stencil!(model_cpu)
 
+    model_gpu = adapt(CUDABackend(), model_cpu)
+    stencil!(model_gpu)
     # dlastu = copy(lastu)
     # dnextu = copy(nextu)
 
@@ -49,9 +62,11 @@ function main()
     #     Duplicated(nextu, dnextu),
     #     Duplicated(lastu, dlastu),
     #     @Const(nx), @Const(ny),
-    #     @Const(device),
+    #     @Const(backend),
     # )
-    return model.nextu#, dlastu
+    return model_cpu.nextu, model_gpu.nextu#, dlastu
 end
 
-u = main()
+u_cpu, u_gpu = main()
+@show typeof(u_cpu)
+@show typeof(u_gpu)
