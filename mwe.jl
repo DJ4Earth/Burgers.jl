@@ -43,6 +43,15 @@ function stencil!(model)
     return nothing
 end
 
+function differentiate!(model)
+    dmodel = deepcopy(model)
+    Enzyme.autodiff(
+        ReverseWithPrimal, stencil!,
+        Duplicated(model, dmodel),
+    )
+    return dmodel
+end
+
 function main()
     nx = 10
     ny = 10
@@ -54,19 +63,11 @@ function main()
 
     model_gpu = adapt(CUDABackend(), model_cpu)
     stencil!(model_gpu)
-    # dlastu = copy(lastu)
-    # dnextu = copy(nextu)
 
-    # Enzyme.autodiff(
-    #     ReverseWithPrimal, stencil!,
-    #     Duplicated(nextu, dnextu),
-    #     Duplicated(lastu, dlastu),
-    #     @Const(nx), @Const(ny),
-    #     @Const(backend),
-    # )
-    return model_cpu.nextu, model_gpu.nextu#, dlastu
+    # dmodel = differentiate!(model_cpu)
+    return model_cpu, model_gpu
 end
 
-u_cpu, u_gpu = main()
-@show typeof(u_cpu)
-@show typeof(u_gpu)
+model, dmodel = main()
+@show typeof(model)
+@show typeof(dmodel)
